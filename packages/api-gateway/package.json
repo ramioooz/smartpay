@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
-    "test": "echo \"No tests yet for @smartpay/api-gateway\"",
+    "test": "pnpm --dir ../.. test:spec -- tests/integration/payment-flow.test.ts",
     "db:generate": "echo \"No database generation yet for @smartpay/api-gateway\"",
     "db:migrate": "echo \"No database migrations yet for @smartpay/api-gateway\""
   },

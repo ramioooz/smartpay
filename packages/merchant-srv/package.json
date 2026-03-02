@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
-    "test": "echo \"No tests yet for @smartpay/merchant-srv\"",
+    "test": "pnpm --dir ../.. test:spec -- tests/integration/payment-flow.test.ts",
     "db:generate": "pnpm exec prisma generate --schema prisma/schema.prisma",
     "db:migrate": "pnpm exec prisma migrate deploy --schema prisma/schema.prisma"
   },
