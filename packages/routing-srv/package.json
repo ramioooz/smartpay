@@ -5,14 +5,25 @@
   "types": "dist/index.d.ts",
   "files": ["dist"],
   "scripts": {
+    "prebuild": "pnpm db:generate",
     "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
     "test": "echo \"No tests yet for @smartpay/routing-srv\"",
-    "db:generate": "echo \"No database generation yet for @smartpay/routing-srv\"",
-    "db:migrate": "echo \"No database migrations yet for @smartpay/routing-srv\""
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma"
   },
   "dependencies": {
-    "@smartpay/shared": "workspace:*"
+    "@prisma/client": "^6.19.2",
+    "@smartpay/shared": "workspace:*",
+    "express": "^5.1.0",
+    "ioredis": "^5.8.1",
+    "mongodb": "^6.20.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "prisma": "^6.19.2"
   }
 }

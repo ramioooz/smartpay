@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/routing-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ROUTING_DATABASE_URL")
+  schemas  = ["routing_schema"]
+}
+
+model PspHealth {
+  id                Int      @id @default(autoincrement())
+  pspName           String   @db.VarChar(50)
+  successCount      Int      @default(0)
+  failureCount      Int      @default(0)
+  averageLatencyMs  Decimal  @db.Decimal(10, 2)
+  lastFailureAt     DateTime?
+  lastFailureReason String?
+  windowStart       DateTime
+  windowEnd         DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([pspName, windowStart])
+  @@map("psp_health")
+  @@schema("routing_schema")
+}

@@ -8,6 +8,7 @@ Current implementation includes:
 - API gateway auth/rate-limiting/proxy layer
 - payment service core orchestration with adapter registry, idempotency lock, and health checks
 - FX service core with Frankfurter primary provider, simulated fallback provider, Redis quote cache, and Kafka rate publishing
+- routing service core with weighted PSP scoring, rule management APIs, and PSP health persistence
 
 ## Local Run
 
