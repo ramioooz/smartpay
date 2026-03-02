@@ -1,3 +1,8 @@
 # @smartpay/shared
 
-Shared utilities and contracts used by all SmartPay services.
+Shared foundations for all SmartPay services:
+- domain and event types
+- Kafka client/producer/consumer wrappers
+- Redis and Mongo connection factories
+- reusable middleware for validation, request IDs, auth, and error handling
+- logger and reliability helpers (retry, circuit breaker, idempotency)
