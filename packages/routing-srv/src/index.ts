@@ -1,7 +1,7 @@
 import { createLogger } from '@smartpay/shared';
 import { createApp } from './app';
 import { config } from './config';
-import { startPaymentOutcomeConsumer } from './consumers/payment-outcome.consumer';
+import { startPaymentOutcomeConsumer, stopPaymentOutcomeConsumer } from './consumers/payment-outcome.consumer';
 import { closeMongoClient, getMongoClient } from './services/mongo';
 import { prisma } from './services/prisma';
 import { closeRedisClient } from './services/redis';
@@ -21,6 +21,7 @@ async function bootstrap(): Promise<void> {
   const shutdown = async () => {
     logger.info('routing-srv shutting down');
     server.close(async () => {
+      await stopPaymentOutcomeConsumer();
       await prisma.$disconnect();
       await closeMongoClient();
       await closeRedisClient();
@@ -34,6 +35,7 @@ async function bootstrap(): Promise<void> {
 
 bootstrap().catch(async (error) => {
   logger.error({ error }, 'routing-srv failed to boot');
+  await stopPaymentOutcomeConsumer();
   await prisma.$disconnect();
   await closeMongoClient();
   await closeRedisClient();
