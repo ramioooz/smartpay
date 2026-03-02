@@ -136,6 +136,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_BROKERS: ${KAFKA_BROKERS}
+      ROUTING_SRV_URL: http://routing-srv:3004
+      FX_SRV_URL: http://fx-srv:3002
     depends_on:
       pgbouncer:
         condition: service_healthy

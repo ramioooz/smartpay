@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PAYMENT_DATABASE_URL")
+  schemas  = ["payments_schema"]
+}
+
+model Payment {
+  id                 String        @id @default(uuid()) @db.Uuid
+  merchantId         String        @db.Uuid
+  externalRef        String        @db.VarChar(255)
+  amount             Decimal       @db.Decimal(18, 8)
+  currency           String        @db.VarChar(3)
+  targetCurrency     String        @db.VarChar(3)
+  targetAmount       Decimal?      @db.Decimal(18, 8)
+  fxRate             Decimal?      @db.Decimal(18, 8)
+  fxQuoteId          String?       @db.VarChar(100)
+  pspName            String?       @db.VarChar(50)
+  pspTransactionId   String?       @db.VarChar(255)
+  status             PaymentStatus @default(INITIATED)
+  beneficiaryName    String?       @db.VarChar(255)
+  beneficiaryCountry String?       @db.VarChar(2)
+  metadata           Json?
+  idempotencyKey     String?       @unique @db.VarChar(255)
+  failureReason      String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  settledAt          DateTime?
+  ledgerEntries      LedgerEntry[]
+
+  @@index([merchantId])
+  @@index([status])
+  @@index([pspName, status])
+  @@index([createdAt])
+  @@map("payments")
+  @@schema("payments_schema")
+}
+
+model LedgerEntry {
+  id          String     @id @default(uuid()) @db.Uuid
+  paymentId   String     @db.Uuid
+  payment     Payment    @relation(fields: [paymentId], references: [id])
+  type        LedgerType
+  amount      Decimal    @db.Decimal(18, 8)
+  currency    String     @db.VarChar(3)
+  pspName     String?    @db.VarChar(50)
+  description String?
+  createdAt   DateTime   @default(now())
+
+  @@index([paymentId])
+  @@map("ledger_entries")
+  @@schema("payments_schema")
+}
+
+enum PaymentStatus {
+  INITIATED
+  ROUTING
+  ROUTED
+  PROCESSING
+  SUBMITTED
+  SETTLED
+  FAILED
+  REFUND_INITIATED
+  REFUNDED
+  CANCELLED
+
+  @@schema("payments_schema")
+}
+
+enum LedgerType {
+  DEBIT
+  CREDIT
+  FEE
+  REFUND
+
+  @@schema("payments_schema")
+}
