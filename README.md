@@ -174,6 +174,20 @@ curl -X POST http://localhost:3005/reconciliation/run \
   -d '{}'
 ```
 
+## Testing
+
+SmartPay now includes a root Jest test harness with unit and integration boilerplate under `tests/`:
+
+- `tests/unit/*` for deterministic service-level logic
+- `tests/integration/*` for docker-backed end-to-end flows
+
+Commands:
+
+```bash
+pnpm test       # package tests + root Jest suites
+pnpm test:spec  # root Jest suites only
+```
+
 ## Migration Path to AWS
 
 | Local Component | AWS Target |
