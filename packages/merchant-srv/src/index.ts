@@ -1,7 +1,7 @@
 import { createLogger } from '@smartpay/shared';
 import { config } from './config';
 import { createApp } from './app';
-import { startPaymentEventsConsumer } from './consumers/payment-events.consumer';
+import { startPaymentEventsConsumer, stopPaymentEventsConsumer } from './consumers/payment-events.consumer';
 import { closeMongoClient, getMongoClient } from './services/mongo';
 import { prisma } from './services/prisma';
 
@@ -20,6 +20,7 @@ async function bootstrap() {
   const shutdown = async () => {
     logger.info('merchant-srv shutting down');
     server.close(async () => {
+      await stopPaymentEventsConsumer();
       await prisma.$disconnect();
       await closeMongoClient();
       process.exit(0);
@@ -32,6 +33,7 @@ async function bootstrap() {
 
 bootstrap().catch(async (error) => {
   logger.error({ error }, 'merchant-srv failed to boot');
+  await stopPaymentEventsConsumer();
   await prisma.$disconnect();
   await closeMongoClient();
   process.exit(1);

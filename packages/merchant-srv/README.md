@@ -24,7 +24,7 @@ This service is the source of truth for merchant identities and key status. It p
 
 ## Kafka events
 - Produces: none yet (planned in next service increment)
-- Consumes: planned consumer stub for payment events (`src/consumers/payment-events.consumer.ts`)
+- Consumes: `merchant.webhook.dispatch` (payment lifecycle webhook dispatch requests from `payment-srv`)
 
 ## Dependencies
 - `@smartpay/shared` for middleware/logger/helpers
