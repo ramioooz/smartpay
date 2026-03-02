@@ -1,4 +1,4 @@
-import { Prisma, PaymentStatus as PrismaPaymentStatus } from '@prisma/client';
+import { Prisma, PaymentStatus as PrismaPaymentStatus } from '../../node_modules/.prisma/payment-client';
 import {
   CreatePaymentRequest,
   createKafkaClient,
