@@ -25,7 +25,7 @@ Produces:
 - none in this PR
 
 Consumes:
-- `payment.settled`, `payment.failed` (consumer scaffold present, full ingestion wiring in follow-up PR)
+- `payment.settled`, `payment.failed` to update rolling PSP health metrics in near-real-time
 
 ## Dependencies
 Synchronous calls:
