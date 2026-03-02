@@ -10,7 +10,7 @@
     "start": "node dist/index.js",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
-    "test": "echo \"No tests yet for @smartpay/payment-srv\"",
+    "test": "pnpm --dir ../.. test:spec -- tests/unit/orchestrator.test.ts tests/unit/saga.test.ts tests/integration/psp-failover.test.ts",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma"
   },

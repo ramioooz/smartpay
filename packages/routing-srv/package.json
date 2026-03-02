@@ -10,7 +10,7 @@
     "start": "node dist/index.js",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
-    "test": "echo \"No tests yet for @smartpay/routing-srv\"",
+    "test": "pnpm --dir ../.. test:spec -- tests/unit/routing-engine.test.ts tests/unit/payment-outcome-consumer.test.ts tests/unit/psp-health-poller.test.ts",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma"
   },
