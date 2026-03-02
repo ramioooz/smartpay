@@ -196,6 +196,22 @@ curl -X POST http://localhost:3005/reconciliation/run \
 5. Replace Nginx with ALB and optionally front with API Gateway for auth, quotas, and usage plans.
 6. Add IAM roles, secret rotation, observability (CloudWatch + OpenTelemetry), and CI/CD deployment gates.
 
+## Kubernetes Manifests
+
+Kubernetes manifests for SmartPay live under `infra/k8s` and include:
+
+- `namespace.yml` for `smartpay`
+- one manifest per microservice (`api-gateway`, `payment-srv`, `fx-srv`, `merchant-srv`, `routing-srv`, `reconciliation-srv`)
+- `pgbouncer.yml` with deployment/service and ConfigMap-backed config
+- ingress for external traffic to `api-gateway`
+
+The manifests are tuned for baseline production parity:
+
+- 2 replicas per service
+- health probes on `/health`
+- resource limits (256Mi/250m for most services, 512Mi/500m for `payment-srv`)
+- config provided via ConfigMaps
+
 ## Current Status
 
 SmartPay now has end-to-end service implementations for gateway, payment orchestration, FX, merchant management, routing, and reconciliation. The remaining production hardening work is focused on deeper test coverage, real PSP SDK integrations, and AWS deployment automation.

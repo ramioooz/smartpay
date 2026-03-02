@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reconciliation-srv-config
+  namespace: smartpay
+data:
+  NODE_ENV: production
+  PORT: "3005"
+  MONGO_URI: mongodb://mongodb:27017/smartpay
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  KAFKA_BROKERS: kafka:9092
+  RECON_HOURLY_CRON: "0 * * * *"
+  RECON_DAILY_CRON: "30 0 * * *"
+  RECON_DEFAULT_LOOKBACK_MINUTES: "60"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reconciliation-srv
+  namespace: smartpay
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reconciliation-srv
+  template:
+    metadata:
+      labels:
+        app: reconciliation-srv
+    spec:
+      containers:
+        - name: reconciliation-srv
+          image: ghcr.io/ramioooz/smartpay-reconciliation-srv:latest
+          ports:
+            - containerPort: 3005
+          envFrom:
+            - configMapRef:
+                name: reconciliation-srv-config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3005
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3005
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reconciliation-srv
+  namespace: smartpay
+spec:
+  selector:
+    app: reconciliation-srv
+  ports:
+    - name: http
+      port: 3005
+      targetPort: 3005
+  type: ClusterIP
