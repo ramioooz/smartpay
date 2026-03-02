@@ -2,7 +2,7 @@ FROM node:20-alpine AS base
 RUN npm install -g pnpm
 
 WORKDIR /app
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml turbo.json ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml turbo.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/api-gateway/package.json packages/api-gateway/
 
@@ -20,8 +20,11 @@ WORKDIR /app
 COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/packages/shared/dist ./packages/shared/dist
 COPY --from=base /app/packages/shared/package.json ./packages/shared/
+COPY --from=base /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=base /app/packages/api-gateway/dist ./packages/api-gateway/dist
-COPY --from=base /app/packages/api-gateway/package.json ./packages/api-gateway/
+COPY --from=base /app/packages/api-gateway/node_modules ./packages/api-gateway/node_modules
+
+RUN mkdir -p /app/node_modules/@smartpay && ln -sfn /app/packages/shared /app/node_modules/@smartpay/shared
 
 WORKDIR /app/packages/api-gateway
 ENV NODE_ENV=production
