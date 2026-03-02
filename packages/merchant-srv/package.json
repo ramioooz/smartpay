@@ -5,14 +5,26 @@
   "types": "dist/index.d.ts",
   "files": ["dist"],
   "scripts": {
+    "prebuild": "pnpm exec prisma generate --schema prisma/schema.prisma",
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
     "test": "echo \"No tests yet for @smartpay/merchant-srv\"",
-    "db:generate": "echo \"No database generation yet for @smartpay/merchant-srv\"",
-    "db:migrate": "echo \"No database migrations yet for @smartpay/merchant-srv\""
+    "db:generate": "pnpm exec prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "pnpm exec prisma migrate deploy --schema prisma/schema.prisma"
   },
   "dependencies": {
-    "@smartpay/shared": "workspace:*"
+    "@prisma/client": "^6.16.2",
+    "@smartpay/shared": "workspace:*",
+    "bcryptjs": "^3.0.2",
+    "express": "^5.1.0",
+    "mongodb": "^6.19.0",
+    "nanoid": "^5.1.5",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/express": "^5.0.3",
+    "prisma": "^6.16.2"
   }
 }
