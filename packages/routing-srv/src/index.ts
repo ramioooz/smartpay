@@ -4,6 +4,7 @@ import { config } from './config';
 import { startPaymentOutcomeConsumer, stopPaymentOutcomeConsumer } from './consumers/payment-outcome.consumer';
 import { closeMongoClient, getMongoClient } from './services/mongo';
 import { prisma } from './services/prisma';
+import { startPspHealthPoller, stopPspHealthPoller } from './services/psp-health-poller';
 import { closeRedisClient } from './services/redis';
 
 const logger = createLogger({ service: 'routing-srv' });
@@ -12,6 +13,7 @@ async function bootstrap(): Promise<void> {
   await prisma.$connect();
   await getMongoClient();
   await startPaymentOutcomeConsumer();
+  await startPspHealthPoller();
 
   const app = createApp();
   const server = app.listen(config.PORT, () => {
@@ -22,6 +24,7 @@ async function bootstrap(): Promise<void> {
     logger.info('routing-srv shutting down');
     server.close(async () => {
       await stopPaymentOutcomeConsumer();
+      await stopPspHealthPoller();
       await prisma.$disconnect();
       await closeMongoClient();
       await closeRedisClient();
@@ -36,6 +39,7 @@ async function bootstrap(): Promise<void> {
 bootstrap().catch(async (error) => {
   logger.error({ error }, 'routing-srv failed to boot');
   await stopPaymentOutcomeConsumer();
+  await stopPspHealthPoller();
   await prisma.$disconnect();
   await closeMongoClient();
   await closeRedisClient();

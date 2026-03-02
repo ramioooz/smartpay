@@ -78,6 +78,7 @@ Data Layer:
 - Asynchronous Kafka (event-driven fanout):
   - Payment Service emits `payment.*` lifecycle events
   - Routing Service consumes outcomes to update PSP health windows
+  - Routing Service also polls `payment-srv /health` every 30 seconds to refresh adapter health even when event volume is low
   - Reconciliation Service consumes `payment.settled` and builds its own settlement view
   - Merchant Service consumes payment outcomes to drive webhooks
   - FX Service emits `fx.rate.updated` broadcasts
