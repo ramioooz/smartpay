@@ -6,6 +6,7 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
     "test": "echo \"No tests yet for @smartpay/fx-srv\"",
@@ -13,6 +14,13 @@
     "db:migrate": "echo \"No database migrations yet for @smartpay/fx-srv\""
   },
   "dependencies": {
-    "@smartpay/shared": "workspace:*"
+    "@smartpay/shared": "workspace:*",
+    "axios": "^1.13.1",
+    "express": "^5.1.0",
+    "ioredis": "^5.8.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3"
   }
 }
