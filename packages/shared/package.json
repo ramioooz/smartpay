@@ -10,5 +10,16 @@
     "test": "echo \"No tests yet for @smartpay/shared\"",
     "db:generate": "echo \"No database generation for shared\"",
     "db:migrate": "echo \"No migrations for shared\""
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "ioredis": "^5.8.1",
+    "kafkajs": "^2.2.4",
+    "mongoose": "^8.19.2",
+    "pino": "^10.1.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3"
   }
 }
