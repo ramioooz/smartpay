@@ -212,6 +212,18 @@ The manifests are tuned for baseline production parity:
 - resource limits (256Mi/250m for most services, 512Mi/500m for `payment-srv`)
 - config provided via ConfigMaps
 
+## Terraform (AWS)
+
+AWS infrastructure definitions are available in `infra/terraform`:
+
+- `main.tf` (provider, VPC module, baseline security groups)
+- `variables.tf` (environment and sizing configuration)
+- `ecs.tf` (ECS Fargate cluster, tasks, services, ALB)
+- `rds.tf` (PostgreSQL RDS)
+- `rds-proxy.tf` (RDS Proxy)
+- `msk.tf` (Managed Kafka / MSK)
+- `elasticache.tf` (Redis / ElastiCache)
+
 ## Current Status
 
 SmartPay now has end-to-end service implementations for gateway, payment orchestration, FX, merchant management, routing, and reconciliation. The remaining production hardening work is focused on deeper test coverage, real PSP SDK integrations, and AWS deployment automation.
