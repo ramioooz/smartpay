@@ -98,7 +98,7 @@ class PaymentOrchestrator {
       }
 
       payment = await this.markPaymentFailed(payment.id, 'All configured PSP adapters failed', correlationId);
-      await executeFailureCompensation(payment.id, correlationId, [
+      const compensationSummary = await executeFailureCompensation(payment.id, correlationId, [
         {
           name: 'release_fx_quote_lock',
           run: async () => {
@@ -106,6 +106,22 @@ class PaymentOrchestrator {
           },
         },
       ]);
+      await appendTransactionLog({
+        paymentId: payment.id,
+        event: 'saga.summary',
+        correlationId,
+        response: compensationSummary as unknown as Record<string, unknown>,
+      });
+      if (compensationSummary.failedSteps > 0) {
+        logger.warn(
+          {
+            paymentId: payment.id,
+            failedSteps: compensationSummary.failedSteps,
+            correlationId,
+          },
+          'Compensation finished with failed steps',
+        );
+      }
 
       await this.publishEvent(TOPICS.PAYMENT_FAILED, {
         paymentId: payment.id,
