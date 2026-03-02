@@ -1,0 +1,14 @@
+{
+  "name": "@smartpay/shared",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src --ext .ts",
+    "test": "echo \"No tests yet for @smartpay/shared\"",
+    "db:generate": "echo \"No database generation for shared\"",
+    "db:migrate": "echo \"No migrations for shared\""
+  }
+}
