@@ -3,6 +3,7 @@ PSP routing decision service for SmartPay.
 
 ## Role in the System
 This service selects the best PSP for each payment using weighted scoring and merchant/rule constraints. It tracks PSP health snapshots and exposes rule management endpoints for dynamic routing behavior. It does not execute payments; it only returns routing decisions.
+It updates health in two ways: near-real-time Kafka outcome ingestion and a 30-second active poll loop against `payment-srv /health` so routing stays current during low traffic windows.
 
 ## Data Stores
 - PostgreSQL (`routing_schema.psp_health`) for health windows and latency/success metrics
@@ -27,6 +28,11 @@ Produces:
 Consumes:
 - `payment.settled`, `payment.failed` to update rolling PSP health metrics in near-real-time
 
+Polling:
+- Calls `payment-srv` `GET /health` every `ROUTING_HEALTH_POLL_INTERVAL_MS` (default 30000ms)
+- Retries transient failures with exponential backoff
+- Stops cleanly on service shutdown
+
 ## Dependencies
 Synchronous calls:
 - none required for route decision API in current implementation
@@ -42,6 +48,10 @@ Required environment variables:
 
 Optional:
 - `PAYMENT_SRV_URL`
+- `ROUTING_HEALTH_POLL_INTERVAL_MS`
+- `ROUTING_HEALTH_POLL_TIMEOUT_MS`
+- `ROUTING_HEALTH_POLL_RETRIES`
+- `ROUTING_HEALTH_POLL_BASE_DELAY_MS`
 
 ## Running Standalone
 ```bash

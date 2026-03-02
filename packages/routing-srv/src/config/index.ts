@@ -9,6 +9,10 @@ const envSchema = z.object({
   REDIS_PORT: z.coerce.number().int().positive().default(6379),
   KAFKA_BROKERS: z.string().default('kafka:29092'),
   PAYMENT_SRV_URL: z.string().url().default('http://payment-srv:3001'),
+  ROUTING_HEALTH_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(30000),
+  ROUTING_HEALTH_POLL_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  ROUTING_HEALTH_POLL_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+  ROUTING_HEALTH_POLL_BASE_DELAY_MS: z.coerce.number().int().positive().default(250),
 });
 
 const parsed = envSchema.safeParse(process.env);
