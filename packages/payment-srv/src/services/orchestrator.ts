@@ -118,8 +118,10 @@ class PaymentOrchestrator {
       await publishMerchantWebhook(
         {
           type: 'payment.failed',
+          merchantId: input.merchantId,
           paymentId: payment.id,
           reason: payment.failureReason,
+          timestamp: new Date().toISOString(),
         },
         correlationId,
       );
@@ -448,8 +450,10 @@ class PaymentOrchestrator {
     await publishMerchantWebhook(
       {
         type: 'payment.settled',
+        merchantId: input.merchantId,
         paymentId,
         pspName: adapter.name,
+        timestamp: new Date().toISOString(),
       },
       correlationId,
     );
