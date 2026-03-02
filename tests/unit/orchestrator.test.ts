@@ -203,7 +203,18 @@ describe('orchestrator', () => {
         message: 'declined',
       }),
     });
-    executeFailureCompensationMock.mockResolvedValue(undefined);
+    executeFailureCompensationMock.mockResolvedValue({
+      totalSteps: 1,
+      completedSteps: 1,
+      failedSteps: 0,
+      results: [
+        {
+          step: 'notify-merchant',
+          status: 'completed',
+          durationMs: 5,
+        },
+      ],
+    });
     publishMerchantWebhookMock.mockResolvedValue(undefined);
 
     const result = await paymentOrchestrator.createPayment(
