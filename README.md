@@ -1,64 +1,201 @@
-# SmartPay
+# SmartPay — Global Payment Orchestration Platform
 
-Local development now uses Nginx as the edge entrypoint in front of `api-gateway`.
+SmartPay orchestrates cross-border payment flows across multiple PSPs with routing, FX quoting, failover, event-driven reconciliation, and strict service-level data isolation.
 
-Current implementation includes:
-- shared package foundation (types, middleware, Kafka/db helpers, utilities)
-- merchant service core APIs
-- API gateway auth/rate-limiting/proxy layer
-- payment service core orchestration with adapter registry, idempotency lock, and health checks
-- FX service core with Frankfurter primary provider, simulated fallback provider, Redis quote cache, and Kafka rate publishing
-- routing service core with weighted PSP scoring, rule management APIs, and PSP health persistence
-- reconciliation service core with settlement provider registry, discrepancy detection, and scheduled batch runs
+## Overview
 
-## Local Run
+I built SmartPay to handle the messy parts of real payment infrastructure: provider outages, duplicate requests, stale FX quotes, settlement drift, and high-throughput traffic. My goal was to separate concerns into focused microservices with shared contracts and reliable event flows so the platform scales without coupling all business logic into one service.
+
+The design is production-oriented even in local development: Kafka-driven async workflows, schema-per-service data ownership, PgBouncer-style pooling, Redis-backed idempotency, and API edge concerns handled independently from core payment orchestration.
+
+## System Architecture
+
+```text
+                          ┌───────────────┐
+                          │  API Gateway  │  (auth, rate-limit, request routing)
+                          │  :3000        │
+                          └──────┬────────┘
+                                 │
+                ┌────────────────┼────────────────┐
+                │                │                │
+       ┌────────▼──────┐ ┌──────▼───────┐ ┌──────▼────────┐
+       │  Payment Srv  │ │   FX Srv     │ │ Merchant Srv  │
+       │  :3001        │ │   :3002      │ │ :3003         │
+       └────────┬──────┘ └──────┬───────┘ └───────────────┘
+                │                │
+                ▼                ▼
+       ┌─────────────────────────────────┐
+       │         Kafka (Events)          │
+       └───────────┬─────────────────────┘
+                   │
+          ┌────────┼────────┐
+          │                 │
+  ┌───────▼──────┐  ┌──────▼──────────────┐
+  │ Routing Srv  │  │ Reconciliation Srv  │
+  │ :3004        │  │ :3005               │
+  └──────────────┘  └─────────────────────┘
+
+Data Layer:
+┌──────────────────────────────────────────────┐
+│  PostgreSQL (:5432)                          │
+│  └── PgBouncer (:6432) ← all services       │
+│      ├── payments_schema   (payment-srv)     │
+│      ├── merchants_schema  (merchant-srv)    │
+│      └── routing_schema    (routing-srv)     │
+├──────────────────────────────────────────────┤
+│  MongoDB (:27017)                            │
+│      ├── merchant configs  (merchant-srv)    │
+│      ├── routing rules     (routing-srv)     │
+│      ├── audit logs        (payment-srv)     │
+│      └── recon reports     (reconciliation)  │
+├──────────────────────────────────────────────┤
+│  Redis (:6379)                               │
+│      ├── FX rate cache     (fx-srv)          │
+│      ├── idempotency keys  (payment-srv)     │
+│      ├── rate limiting     (api-gateway)     │
+│      └── circuit breaker   (payment-srv)     │
+└──────────────────────────────────────────────┘
+```
+
+## Microservices
+
+| Service | Port | Purpose | Data Ownership |
+|---|---:|---|---|
+| `api-gateway` | 3000 | External entrypoint, API key auth, rate limiting, request proxying | Redis rate-limit state |
+| `payment-srv` | 3001 | Core payment orchestration and PSP execution | PostgreSQL `payments_schema`, Mongo audit logs, Redis idempotency/circuit keys |
+| `fx-srv` | 3002 | FX rates, quote locking, spread application | Redis rate and quote cache |
+| `merchant-srv` | 3003 | Merchant lifecycle, API keys, merchant config, webhook dispatch | PostgreSQL `merchants_schema`, Mongo merchant configs |
+| `routing-srv` | 3004 | PSP scoring and routing decision engine | PostgreSQL `routing_schema`, Mongo routing rules |
+| `reconciliation-srv` | 3005 | Settlement matching, discrepancy detection, reconciliation reporting | Mongo settled snapshots/reports/discrepancies, Redis dedupe |
+| `shared` | n/a | Shared contracts, middleware, Kafka/DB helpers | n/a |
+
+### How Services Interact
+
+- Synchronous HTTP (request/response required):
+  - API Gateway → Merchant Service (`verify-key`)
+  - Payment Service → Routing Service (`/route`)
+  - Payment Service → FX Service (`/rates/quote`)
+- Asynchronous Kafka (event-driven fanout):
+  - Payment Service emits `payment.*` lifecycle events
+  - Routing Service consumes outcomes to update PSP health windows
+  - Reconciliation Service consumes `payment.settled` and builds its own settlement view
+  - Merchant Service consumes payment outcomes to drive webhooks
+  - FX Service emits `fx.rate.updated` broadcasts
+
+## Why This Architecture
+
+- I chose service boundaries around business capabilities so each domain can scale independently.
+- I use provider/adapter patterns so external integrations are swappable by configuration.
+- I keep transactional money movement in PostgreSQL and flexible, high-write documents in MongoDB.
+- I use Redis for low-latency coordination primitives: idempotency, throttling, and shared service state.
+- I use Kafka to decouple downstream processing (reconciliation, webhook dispatch, health tracking) from synchronous payment latency.
+
+## Local Development
+
+### Prerequisites
+
+- Docker + Docker Compose
+- Node.js 20 LTS
+- pnpm 9+
+
+### Start the stack
 
 ```bash
+cp .env.example .env
+pnpm install
+
 docker compose --profile app up -d --build
 ```
 
-Access SmartPay through Nginx:
+SmartPay edge endpoint (through Nginx):
 
-- `http://localhost:${NGINX_PORT:-3000}`
+- `http://localhost:3000`
 
-`api-gateway` is internal-only in Docker Compose, which allows horizontal scaling without host-port conflicts.
+### Useful health endpoints
 
-## Scale API Gateway
+- `http://localhost:3000/health` (gateway edge)
+- `http://localhost:3001/health` (payment)
+- `http://localhost:3002/health` (fx)
+- `http://localhost:3003/health` (merchant)
+- `http://localhost:3004/health` (routing)
+- `http://localhost:3005/health` (reconciliation)
+
+Kafka UI:
+
+- `http://localhost:8080`
+
+### Scale gateway replicas locally
 
 ```bash
 docker compose --profile app up -d --scale api-gateway=3
 ```
 
-Nginx load-balances requests to gateway replicas over the internal Docker network.
+Nginx load-balances across internal gateway containers, which mirrors how I would operate the edge tier in production.
 
-## Payment Service Setup
+## Example API Calls
 
-The payment service now uses Prisma with `payments_schema`. Generate the client and apply schema before testing payment flows:
-
-```bash
-pnpm --filter @smartpay/payment-srv db:generate
-PAYMENT_DATABASE_URL='postgresql://payment_srv_user:payment_srv_password@localhost:6432/smartpay?schema=payments_schema&pgbouncer=true' \
-pnpm --filter @smartpay/payment-srv exec prisma db push --schema prisma/schema.prisma
-```
-
-## FX Service Smoke Test
-
-With compose running, you can test FX APIs directly:
+Create merchant:
 
 ```bash
-curl http://localhost:3002/health
-curl http://localhost:3002/rates/USD-EUR
-curl -X POST http://localhost:3002/rates/quote \
+curl -X POST http://localhost:3000/api/v1/merchants \
   -H 'content-type: application/json' \
-  -d '{"pair":"USD-EUR","sourceAmount":1000,"merchantId":"a1b2c3d4-e5f6-7890-abcd-ef1234567890"}'
+  -d '{"name":"TestCorp","email":"ops@testcorp.com"}'
 ```
 
-## Reconciliation Service Smoke Test
+Submit payment:
 
 ```bash
-curl http://localhost:3005/health
+curl -X POST http://localhost:3000/api/v1/payments \
+  -H 'content-type: application/json' \
+  -H 'x-api-key: sk_test_smartpay_testcorp' \
+  -d '{
+    "merchantId":"a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "externalRef":"inv-1001",
+    "amount":1250.50,
+    "currency":"USD",
+    "targetCurrency":"AED",
+    "beneficiary":{"name":"Ali Noor","country":"AE"}
+  }'
+```
+
+Get FX quote:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/rates/quote \
+  -H 'content-type: application/json' \
+  -d '{"pair":"USD-AED","sourceAmount":1000,"merchantId":"a1b2c3d4-e5f6-7890-abcd-ef1234567890"}'
+```
+
+Run manual reconciliation:
+
+```bash
 curl -X POST http://localhost:3005/reconciliation/run \
   -H 'content-type: application/json' \
   -d '{}'
-curl http://localhost:3005/reconciliation/reports
 ```
+
+## Migration Path to AWS
+
+| Local Component | AWS Target |
+|---|---|
+| Docker Compose services | ECS Fargate services (or EKS) |
+| Nginx edge container | ALB + AWS API Gateway |
+| PostgreSQL | Amazon RDS PostgreSQL |
+| PgBouncer | Amazon RDS Proxy |
+| MongoDB | Amazon DocumentDB (or managed MongoDB) |
+| Redis | ElastiCache for Redis |
+| Kafka | Amazon MSK |
+| Local env vars | AWS Secrets Manager + SSM Parameter Store |
+
+### Practical migration plan
+
+1. Containerize each service image in ECR and deploy to ECS Fargate with one service per microservice.
+2. Move Postgres to RDS and replace PgBouncer with RDS Proxy; keep per-service users/schema isolation unchanged.
+3. Move Kafka topics to MSK and point `KAFKA_BROKERS` to broker endpoints.
+4. Move Redis and Mongo workloads to managed AWS data stores.
+5. Replace Nginx with ALB and optionally front with API Gateway for auth, quotas, and usage plans.
+6. Add IAM roles, secret rotation, observability (CloudWatch + OpenTelemetry), and CI/CD deployment gates.
+
+## Current Status
+
+SmartPay now has end-to-end service implementations for gateway, payment orchestration, FX, merchant management, routing, and reconciliation. The remaining production hardening work is focused on deeper test coverage, real PSP SDK integrations, and AWS deployment automation.
