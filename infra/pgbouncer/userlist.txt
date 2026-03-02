@@ -1,0 +1,4 @@
+"payment_srv_user" "payment_srv_password"
+"merchant_srv_user" "merchant_srv_password"
+"routing_srv_user" "routing_srv_password"
+"smartpay_admin" "smartpay_dev_password"
