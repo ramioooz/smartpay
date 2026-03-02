@@ -6,6 +6,7 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
     "test": "echo \"No tests yet for @smartpay/reconciliation-srv\"",
@@ -13,6 +14,14 @@
     "db:migrate": "echo \"No database migrations yet for @smartpay/reconciliation-srv\""
   },
   "dependencies": {
-    "@smartpay/shared": "workspace:*"
+    "@smartpay/shared": "workspace:*",
+    "express": "^5.1.0",
+    "ioredis": "^5.8.1",
+    "mongodb": "^6.19.0",
+    "node-cron": "^4.2.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3"
   }
 }

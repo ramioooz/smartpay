@@ -9,6 +9,7 @@ Current implementation includes:
 - payment service core orchestration with adapter registry, idempotency lock, and health checks
 - FX service core with Frankfurter primary provider, simulated fallback provider, Redis quote cache, and Kafka rate publishing
 - routing service core with weighted PSP scoring, rule management APIs, and PSP health persistence
+- reconciliation service core with settlement provider registry, discrepancy detection, and scheduled batch runs
 
 ## Local Run
 
@@ -50,4 +51,14 @@ curl http://localhost:3002/rates/USD-EUR
 curl -X POST http://localhost:3002/rates/quote \
   -H 'content-type: application/json' \
   -d '{"pair":"USD-EUR","sourceAmount":1000,"merchantId":"a1b2c3d4-e5f6-7890-abcd-ef1234567890"}'
+```
+
+## Reconciliation Service Smoke Test
+
+```bash
+curl http://localhost:3005/health
+curl -X POST http://localhost:3005/reconciliation/run \
+  -H 'content-type: application/json' \
+  -d '{}'
+curl http://localhost:3005/reconciliation/reports
 ```

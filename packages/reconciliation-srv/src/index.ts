@@ -1,12 +1,46 @@
-import { SHARED_PACKAGE_READY } from '@smartpay/shared';
+import { createLogger } from '@smartpay/shared';
+import { createApp } from './app';
+import { config } from './config';
+import { startPaymentSettledConsumer } from './consumers/payment-settled.consumer';
+import { startReconciliationScheduler, stopReconciliationScheduler } from './jobs/reconciliation-scheduler';
+import { closeKafkaConnections } from './services/kafka';
+import { closeMongoClient, getMongoClient } from './services/mongo';
+import { closeRedisClient } from './services/redis';
+import { settlementFetcher } from './services/settlement-fetcher';
 
-function bootstrap(): void {
-  if (!SHARED_PACKAGE_READY) {
-    throw new Error('reconciliation-srv failed to bootstrap because shared package is not ready.');
-  }
+const logger = createLogger({ service: 'reconciliation-srv' });
 
-  console.log('@smartpay/reconciliation-srv bootstrap ready');
+async function bootstrap(): Promise<void> {
+  await getMongoClient();
+  settlementFetcher.initialize();
+  await startPaymentSettledConsumer();
+  startReconciliationScheduler();
+
+  const app = createApp();
+  const server = app.listen(config.PORT, () => {
+    logger.info({ port: config.PORT }, 'reconciliation-srv listening');
+  });
+
+  const shutdown = async () => {
+    logger.info('reconciliation-srv shutting down');
+    server.close(async () => {
+      stopReconciliationScheduler();
+      await closeKafkaConnections();
+      await closeMongoClient();
+      await closeRedisClient();
+      process.exit(0);
+    });
+  };
+
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
 }
 
-// FIXME: replace this bootstrap placeholder with the real service startup in a follow-up PR.
-bootstrap();
+bootstrap().catch(async (error) => {
+  logger.error({ error }, 'reconciliation-srv failed to boot');
+  stopReconciliationScheduler();
+  await closeKafkaConnections();
+  await closeMongoClient();
+  await closeRedisClient();
+  process.exit(1);
+});
