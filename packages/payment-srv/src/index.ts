@@ -1,12 +1,51 @@
-import { SHARED_PACKAGE_READY } from '@smartpay/shared';
+import { createLogger } from '@smartpay/shared';
+import { createApp } from './app';
+import { pspAdapterRegistry } from './adapters/registry';
+import { config } from './config';
+import { startRoutingResultConsumer } from './consumers/routing-result.consumer';
+import { connectMongoForPayment, disconnectMongoForPayment } from './services/mongo';
+import { paymentOrchestrator } from './services/orchestrator';
+import { prisma } from './services/prisma';
+import { disconnectRedisClient } from './services/redis';
+import { closeWebhookDispatcher, initWebhookDispatcher } from './services/webhook-dispatch';
 
-function bootstrap(): void {
-  if (!SHARED_PACKAGE_READY) {
-    throw new Error('payment-srv failed to bootstrap because shared package is not ready.');
-  }
+const logger = createLogger({ service: 'payment-srv' });
 
-  console.log('@smartpay/payment-srv bootstrap ready');
+async function bootstrap(): Promise<void> {
+  await prisma.$connect();
+  await connectMongoForPayment();
+  pspAdapterRegistry.initialize();
+  await paymentOrchestrator.connect();
+  await initWebhookDispatcher();
+  await startRoutingResultConsumer();
+
+  const app = createApp();
+  const server = app.listen(config.PORT, () => {
+    logger.info({ port: config.PORT }, 'payment-srv listening');
+  });
+
+  const shutdown = async () => {
+    logger.info('payment-srv shutting down');
+    server.close(async () => {
+      await paymentOrchestrator.disconnect();
+      await closeWebhookDispatcher();
+      await prisma.$disconnect();
+      await disconnectMongoForPayment();
+      await disconnectRedisClient();
+      process.exit(0);
+    });
+  };
+
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
 }
 
-// FIXME: replace this bootstrap placeholder with the real service startup in a follow-up PR.
-bootstrap();
+bootstrap().catch(async (error) => {
+  logger.error({ error }, 'payment-srv failed to boot');
+  await paymentOrchestrator.disconnect();
+  await closeWebhookDispatcher();
+  await prisma.$disconnect();
+  await disconnectMongoForPayment();
+  await disconnectRedisClient();
+  process.exit(1);
+});
