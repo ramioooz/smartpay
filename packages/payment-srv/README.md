@@ -32,6 +32,7 @@ Consumes:
 Synchronous calls:
 - `routing-srv` (`POST /route`) for ranked PSP decisions
 - `fx-srv` (`POST /rates/quote`) for FX quote retrieval
+Routing is treated as a strict dependency: if `routing-srv` is unavailable, payment creation is marked failed instead of falling back to local adapter ordering.
 
 ## Configuration
 Required environment variables:

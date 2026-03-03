@@ -242,6 +242,50 @@ describe('orchestrator', () => {
     expect(releaseLockMock).toHaveBeenCalled();
   });
 
+  it('marks payment failed when routing service is unavailable', async () => {
+    acquireLockMock.mockResolvedValue(true);
+    prismaMock.payment.create.mockResolvedValue(paymentFixture({ id: 'payment-route-fail', status: 'INITIATED' }));
+    prismaMock.payment.updateMany.mockResolvedValue({ count: 1 });
+    routingPostMock.mockRejectedValue(new Error('routing-srv down'));
+    prismaMock.payment.update.mockResolvedValue(
+      paymentFixture({
+        id: 'payment-route-fail',
+        status: 'FAILED',
+        failureReason: 'Routing service unavailable, unable to determine PSP ranking',
+      }),
+    );
+    appendTransactionLogMock.mockResolvedValue(undefined);
+    publishMerchantWebhookMock.mockResolvedValue(undefined);
+
+    const result = await paymentOrchestrator.createPayment(
+      {
+        merchantId: 'merchant-1',
+        externalRef: 'order-route-fail',
+        amount: 140,
+        currency: 'USD',
+        targetCurrency: 'EUR',
+        beneficiary: {
+          name: 'Jane Doe',
+          country: 'DE',
+        },
+      },
+      'req-route-fail',
+    );
+
+    expect(result.status).toBe('FAILED');
+    expect(result.failureReason).toBe('Routing service unavailable, unable to determine PSP ranking');
+    expect(executeFailureCompensationMock).not.toHaveBeenCalled();
+    expect(publishMerchantWebhookMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'payment.failed',
+        paymentId: 'payment-route-fail',
+      }),
+      'req-route-fail',
+    );
+    expect(fxPostMock).not.toHaveBeenCalled();
+    expect(releaseLockMock).toHaveBeenCalled();
+  });
+
   it('initiates refund through resolved adapter and updates payment status', async () => {
     prismaMock.payment.findUnique.mockResolvedValue(paymentFixture({
       id: 'payment-refund',
