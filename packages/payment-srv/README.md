@@ -4,6 +4,7 @@ Core payment orchestration service for SmartPay.
 ## Role in the System
 This service owns the payment lifecycle from initiation to settlement or failure. It selects PSP adapters, applies FX quotes, writes transactional state, and publishes payment domain events. It is the stateful orchestration layer behind `/payments` APIs.
 Failure compensation runs through a saga flow and now records per-step outcomes with durations in MongoDB audit logs for easier incident debugging.
+When all PSP submissions fail, compensation now calls `fx-srv` quote-release API to remove the reserved quote entry.
 
 ## Data Stores
 - PostgreSQL (`payments_schema`) for payments and ledger entries via Prisma

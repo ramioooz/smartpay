@@ -11,6 +11,7 @@ const asyncHandler = (handler: RequestHandler): RequestHandler => {
 
 router.get('/pairs', asyncHandler((req, res) => fxController.getPairs(req, res)));
 router.post('/quote', asyncHandler((req, res) => fxController.createQuote(req, res)));
+router.delete('/quote/:quoteId', asyncHandler((req, res) => fxController.releaseQuote(req, res)));
 router.get('/:pair', asyncHandler((req, res) => fxController.getRate(req, res)));
 
 export { router as fxRoutes };

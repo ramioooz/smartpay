@@ -12,6 +12,7 @@ This service provides real-time FX rates and short-lived conversion quotes used 
 |---|---|---|
 | GET | `/rates/:pair` | Get latest FX rate for a currency pair |
 | POST | `/rates/quote` | Create a locked quote with conversion |
+| DELETE | `/rates/quote/:quoteId` | Release/delete a locked quote reservation |
 | GET | `/rates/pairs` | List supported currency pairs |
 | GET | `/health` | Service health and active provider |
 

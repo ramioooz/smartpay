@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { createQuote, getLatestRate, listSupportedPairs } from '../services/fx.service';
+import { createQuote, getLatestRate, listSupportedPairs, releaseQuote } from '../services/fx.service';
 
 const pairParamsSchema = z.object({
   pair: z.string().min(7),
@@ -11,6 +11,10 @@ const quoteBodySchema = z.object({
   sourceAmount: z.number().positive(),
   merchantId: z.string().uuid(),
   merchantSpreadBps: z.number().int().positive().max(500).optional(),
+});
+
+const quoteParamsSchema = z.object({
+  quoteId: z.string().min(1),
 });
 
 export class FxController {
@@ -28,6 +32,12 @@ export class FxController {
     const body = quoteBodySchema.parse(req.body);
     const quote = await createQuote(body);
     res.status(201).json(quote);
+  }
+
+  async releaseQuote(req: Request, res: Response): Promise<void> {
+    const { quoteId } = quoteParamsSchema.parse(req.params);
+    const result = await releaseQuote(quoteId);
+    res.status(200).json(result);
   }
 }
 

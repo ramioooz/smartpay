@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { FXQuote, FXRate } from '@smartpay/shared';
 import { SUPPORTED_PAIRS, normalizePair } from './supported-pairs';
-import { getCachedRate, setCachedQuote, setCachedRate } from './rate-cache';
+import { deleteCachedQuote, getCachedRate, setCachedQuote, setCachedRate } from './rate-cache';
 import { rateProviderService } from './rate-provider';
 import { calculateSpread } from './spread-calculator';
 
@@ -53,4 +53,12 @@ export async function createQuote(input: {
 
 export function listSupportedPairs(): readonly string[] {
   return SUPPORTED_PAIRS;
+}
+
+export async function releaseQuote(quoteId: string): Promise<{ quoteId: string; released: boolean }> {
+  const deleted = await deleteCachedQuote(quoteId);
+  return {
+    quoteId,
+    released: deleted > 0,
+  };
 }
