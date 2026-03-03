@@ -49,3 +49,7 @@ export async function getCachedQuote(quoteId: string): Promise<FXQuote | null> {
     expiresAt: new Date(parsed.expiresAt),
   };
 }
+
+export async function deleteCachedQuote(quoteId: string): Promise<number> {
+  return getRedisClient().del(quoteKey(quoteId));
+}

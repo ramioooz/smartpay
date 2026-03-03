@@ -113,7 +113,7 @@ class PaymentOrchestrator {
         {
           name: 'release_fx_quote_lock',
           run: async () => {
-            // FIXME: integrate with FX quote reservation release once fx-srv lock API is available.
+            await this.releaseFxQuoteReservation(quote.quoteId, correlationId);
           },
         },
       ]);
@@ -502,6 +502,23 @@ class PaymentOrchestrator {
       },
       correlationId,
     );
+  }
+
+  private async releaseFxQuoteReservation(quoteId: string | undefined, correlationId: string): Promise<void> {
+    if (!quoteId) {
+      return;
+    }
+
+    const response = await fxClient.delete(
+      `${config.FX_SRV_URL}/rates/quote/${quoteId}`,
+      {
+        headers: { 'x-request-id': correlationId },
+      },
+    );
+
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`Failed to release FX quote ${quoteId}, service returned ${response.status}`);
+    }
   }
 
   private async publishEvent(topic: string, payload: Record<string, unknown>, correlationId: string) {

@@ -44,6 +44,7 @@ const prismaMock = {
 
 const routingPostMock = jest.fn();
 const fxPostMock = jest.fn();
+const fxDeleteMock = jest.fn();
 const appendTransactionLogMock = jest.fn();
 const executeFailureCompensationMock = jest.fn();
 const publishMerchantWebhookMock = jest.fn();
@@ -68,7 +69,7 @@ jest.mock('../../packages/payment-srv/src/services/redis', () => ({
 
 jest.mock('../../packages/payment-srv/src/services/http', () => ({
   routingClient: { post: routingPostMock },
-  fxClient: { post: fxPostMock },
+  fxClient: { post: fxPostMock, delete: fxDeleteMock },
 }));
 
 jest.mock('../../packages/payment-srv/src/services/transaction-log', () => ({
@@ -131,6 +132,7 @@ function paymentFixture(partial: Partial<PaymentLike> = {}): PaymentLike {
 describe('orchestrator', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    fxDeleteMock.mockResolvedValue({ status: 200, data: { released: true } });
   });
 
   it('returns existing payment when idempotency lock is already held', async () => {
@@ -235,6 +237,18 @@ describe('orchestrator', () => {
     expect(result.status).toBe('FAILED');
     expect(result.failureReason).toBe('All configured PSP adapters failed');
     expect(executeFailureCompensationMock).toHaveBeenCalledTimes(1);
+    const compensationSteps = executeFailureCompensationMock.mock.calls[0][2] as Array<{
+      name: string;
+      run: () => Promise<void>;
+    }>;
+    expect(compensationSteps[0].name).toBe('release_fx_quote_lock');
+    await compensationSteps[0].run();
+    expect(fxDeleteMock).toHaveBeenCalledWith(
+      'http://fx-srv:3002/rates/quote/q-1',
+      expect.objectContaining({
+        headers: { 'x-request-id': 'req-2' },
+      }),
+    );
     expect(publishMerchantWebhookMock).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'payment.failed', paymentId: 'payment-fail' }),
       'req-2',

@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
-    "test": "pnpm --dir ../.. test:spec -- tests/unit/fx-rate-provider.test.ts tests/unit/spread-calculator.test.ts",
+    "test": "pnpm --dir ../.. test:spec -- tests/unit/fx-rate-provider.test.ts tests/unit/spread-calculator.test.ts tests/unit/fx-quote-release.test.ts",
     "db:generate": "echo \"No database generation yet for @smartpay/fx-srv\"",
     "db:migrate": "echo \"No database migrations yet for @smartpay/fx-srv\""
   },
