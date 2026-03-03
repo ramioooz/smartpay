@@ -34,8 +34,6 @@ export type CreatePaymentResult = {
   updatedAt: Date;
 };
 
-const fallbackRoutingOrder = ['stripe', 'wise', 'checkout', 'crypto-rail'];
-
 class PaymentOrchestrator {
   private readonly idempotencyStore = new IdempotencyStore(getRedisClient());
   private kafkaProducer: KafkaProducer | null = null;
@@ -86,7 +84,20 @@ class PaymentOrchestrator {
     }
 
     try {
-      const routing = await this.resolveRoutingDecision(payment.id, input, correlationId);
+      let routing: RoutingDecision;
+      try {
+        routing = await this.resolveRoutingDecision(payment.id, input, correlationId);
+      } catch (error) {
+        payment = await this.markPaymentFailed(
+          payment.id,
+          'Routing service unavailable, unable to determine PSP ranking',
+          correlationId,
+        );
+        await this.handlePaymentFailure(payment, input.merchantId, correlationId);
+        logger.warn({ error, paymentId: payment.id }, 'Routing dependency failed, payment marked as failed');
+        return this.toCreateResult(payment);
+      }
+
       const quote = await this.resolveFxQuote(input, correlationId);
       const adapters = this.resolveRankedAdapters(routing);
 
@@ -123,24 +134,7 @@ class PaymentOrchestrator {
         );
       }
 
-      await this.publishEvent(TOPICS.PAYMENT_FAILED, {
-        paymentId: payment.id,
-        pspName: payment.pspName,
-        reason: payment.failureReason,
-        willRetry: false,
-        timestamp: new Date().toISOString(),
-      }, correlationId);
-
-      await publishMerchantWebhook(
-        {
-          type: 'payment.failed',
-          merchantId: input.merchantId,
-          paymentId: payment.id,
-          reason: payment.failureReason,
-          timestamp: new Date().toISOString(),
-        },
-        correlationId,
-      );
+      await this.handlePaymentFailure(payment, input.merchantId, correlationId);
 
       return this.toCreateResult(payment);
     } finally {
@@ -278,28 +272,11 @@ class PaymentOrchestrator {
       if (response.status >= 200 && response.status < 300 && response.data) {
         return response.data as RoutingDecision;
       }
+      throw new Error(`Routing service returned unexpected response status ${response.status}`);
     } catch (error) {
-      logger.warn({ error, paymentId }, 'Routing call failed, falling back to local adapter order');
+      logger.warn({ error, paymentId }, 'Routing call failed');
+      throw new Error(`Routing service is unavailable for payment ${paymentId}`);
     }
-
-    // TODO: replace fallback routing with strict failure once routing-srv is fully online.
-    const selectedPSP = fallbackRoutingOrder[0];
-    return {
-      paymentId,
-      selectedPSP,
-      reason: 'Routing service unavailable, using fallback ordering',
-      rankedPSPs: fallbackRoutingOrder.map((pspName, index) => ({
-        pspName,
-        score: 100 - index,
-        factors: {
-          costScore: 0,
-          latencyScore: 0,
-          successRateScore: 0,
-          currencySupport: true,
-          countrySupport: true,
-        },
-      })),
-    };
   }
 
   private async resolveFxQuote(
@@ -496,6 +473,35 @@ class PaymentOrchestrator {
     });
 
     return updated;
+  }
+
+  private async handlePaymentFailure(
+    payment: Awaited<ReturnType<typeof prisma.payment.findUniqueOrThrow>>,
+    merchantId: string,
+    correlationId: string,
+  ): Promise<void> {
+    await this.publishEvent(
+      TOPICS.PAYMENT_FAILED,
+      {
+        paymentId: payment.id,
+        pspName: payment.pspName,
+        reason: payment.failureReason,
+        willRetry: false,
+        timestamp: new Date().toISOString(),
+      },
+      correlationId,
+    );
+
+    await publishMerchantWebhook(
+      {
+        type: 'payment.failed',
+        merchantId,
+        paymentId: payment.id,
+        reason: payment.failureReason,
+        timestamp: new Date().toISOString(),
+      },
+      correlationId,
+    );
   }
 
   private async publishEvent(topic: string, payload: Record<string, unknown>, correlationId: string) {
