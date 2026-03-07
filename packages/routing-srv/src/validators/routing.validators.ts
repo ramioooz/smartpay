@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+const requiredParamSchema = z.preprocess(
+  (value) => (Array.isArray(value) ? value[0] : value),
+  z.string().min(1),
+);
+
 export const routeSchema = z.object({
   paymentId: z.string().uuid(),
   merchantId: z.string().uuid(),
@@ -35,3 +40,11 @@ export const createRuleSchema = z.object({
 });
 
 export const updateRuleSchema = createRuleSchema.partial();
+
+export const routeIdParamsSchema = z.object({
+  id: requiredParamSchema,
+});
+
+export const pspNameParamsSchema = z.object({
+  pspName: requiredParamSchema,
+});
