@@ -1,21 +1,6 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
 import { createQuote, getLatestRate, listSupportedPairs, releaseQuote } from '../services/fx.service';
-
-const pairParamsSchema = z.object({
-  pair: z.string().min(7),
-});
-
-const quoteBodySchema = z.object({
-  pair: z.string().min(7),
-  sourceAmount: z.number().positive(),
-  merchantId: z.string().uuid(),
-  merchantSpreadBps: z.number().int().positive().max(500).optional(),
-});
-
-const quoteParamsSchema = z.object({
-  quoteId: z.string().min(1),
-});
+import { pairParamsSchema, quoteBodySchema, quoteParamsSchema } from '../validators/fx.validators';
 
 export class FxController {
   async getRate(req: Request, res: Response): Promise<void> {

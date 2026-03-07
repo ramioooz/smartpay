@@ -1,31 +1,11 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
 import { reconciliationService } from '../services/reconciliation.service';
-
-const runSchema = z.object({
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
-  pspName: z.string().min(1).optional(),
-});
-
-const listReportsSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(20),
-});
-
-const listDiscrepanciesSchema = z.object({
-  pspName: z.string().min(1).optional(),
-  type: z.string().min(1).optional(),
-  severity: z.string().min(1).optional(),
-  resolved: z
-    .union([z.literal('true'), z.literal('false')])
-    .transform((value: 'true' | 'false') => value === 'true')
-    .optional(),
-});
-
-const resolveDiscrepancySchema = z.object({
-  note: z.string().trim().min(1).max(500).optional(),
-});
+import {
+  listDiscrepanciesSchema,
+  listReportsSchema,
+  resolveDiscrepancySchema,
+  runSchema,
+} from '../validators/reconciliation.validators';
 
 export class ReconciliationController {
   private readIdParam(value: string | string[] | undefined, label: string): string {

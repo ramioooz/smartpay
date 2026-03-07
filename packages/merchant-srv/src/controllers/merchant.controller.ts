@@ -1,44 +1,12 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
 import { apiKeyService } from '../services/api-key.service';
 import { merchantService } from '../services/merchant.service';
-
-const createMerchantSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-});
-
-const updateMerchantSchema = z.object({
-  name: z.string().min(2).optional(),
-  email: z.string().email().optional(),
-  status: z.enum(['ACTIVE', 'SUSPENDED', 'DEACTIVATED']).optional(),
-});
-
-const upsertConfigSchema = z.object({
-  enabledPSPs: z.array(z.string()).optional(),
-  preferredCurrencies: z.array(z.string()).optional(),
-  feeTier: z.enum(['standard', 'premium', 'enterprise']).optional(),
-  fxSpreadBps: z.number().int().nonnegative().optional(),
-  dailyLimit: z.number().positive().optional(),
-  webhooks: z
-    .object({
-      'payment.settled': z.url().optional(),
-      'payment.failed': z.url().optional(),
-      'payment.refunded': z.url().optional(),
-    })
-    .optional(),
-  routingPreferences: z
-    .object({
-      prioritize: z.enum(['cost', 'speed', 'reliability']).optional(),
-      excludePSPs: z.array(z.string()).optional(),
-    })
-    .optional(),
-});
-
-const webhookSchema = z.object({
-  event: z.enum(['payment.settled', 'payment.failed', 'payment.refunded']),
-  url: z.url(),
-});
+import {
+  createMerchantSchema,
+  updateMerchantSchema,
+  upsertConfigSchema,
+  webhookSchema,
+} from '../validators/merchant.validators';
 
 export class MerchantController {
   private normalizeParam(param: string | string[] | undefined, name: string): string {

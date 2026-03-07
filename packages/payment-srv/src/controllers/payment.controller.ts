@@ -1,31 +1,7 @@
 import { Request, Response } from 'express';
 import { RequestWithId } from '@smartpay/shared';
-import { z } from 'zod';
 import { paymentOrchestrator } from '../services/orchestrator';
-
-const createPaymentSchema = z.object({
-  merchantId: z.string().uuid(),
-  externalRef: z.string().min(1).max(255),
-  amount: z.number().positive(),
-  currency: z.string().length(3),
-  targetCurrency: z.string().length(3),
-  beneficiary: z.object({
-    name: z.string().min(1),
-    accountNumber: z.string().optional(),
-    iban: z.string().optional(),
-    bankCode: z.string().optional(),
-    country: z.string().length(2),
-  }),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
-const paymentIdParamsSchema = z.object({
-  id: z.string().uuid(),
-});
-
-const refundSchema = z.object({
-  amount: z.number().positive(),
-});
+import { createPaymentSchema, paymentIdParamsSchema, refundSchema } from '../validators/payment.validators';
 
 export class PaymentController {
   async createPayment(req: Request, res: Response): Promise<void> {
