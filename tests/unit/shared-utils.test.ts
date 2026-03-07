@@ -7,6 +7,7 @@ type RedisLike = {
   set: jest.Mock;
   del: jest.Mock;
   incr: jest.Mock;
+  exists: jest.Mock;
 };
 
 function createRedisMock(): RedisLike {
@@ -15,6 +16,7 @@ function createRedisMock(): RedisLike {
     set: jest.fn(),
     del: jest.fn(),
     incr: jest.fn(),
+    exists: jest.fn(),
   };
 }
 
@@ -91,6 +93,9 @@ describe('shared utils', () => {
       const redis = createRedisMock();
       redis.incr.mockResolvedValue(3);
       redis.get.mockResolvedValue('OPEN');
+      redis.exists.mockResolvedValue(1);
+      redis.set.mockResolvedValue('OK');
+      redis.del.mockResolvedValue(1);
 
       const breaker = new RedisCircuitBreaker(redis as never, {
         key: 'payment:circuit:stripe',
@@ -101,12 +106,14 @@ describe('shared utils', () => {
       await breaker.recordFailure();
       const canExecute = await breaker.canExecute();
 
+      expect(redis.set).toHaveBeenCalledWith('payment:circuit:stripe:state', 'OPEN');
       expect(redis.set).toHaveBeenCalledWith(
-        'payment:circuit:stripe:state',
-        'OPEN',
+        'payment:circuit:stripe:cooldown',
+        '1',
         'EX',
         60,
       );
+      expect(redis.del).toHaveBeenCalledWith('payment:circuit:stripe:trial');
       expect(canExecute).toBe(false);
     });
 
@@ -124,7 +131,62 @@ describe('shared utils', () => {
       await breaker.recordSuccess();
 
       expect(redis.set).toHaveBeenCalledWith('payment:circuit:wise:state', 'CLOSED');
-      expect(redis.del).toHaveBeenCalledWith('payment:circuit:wise:failures');
+      expect(redis.del).toHaveBeenCalledWith(
+        'payment:circuit:wise:failures',
+        'payment:circuit:wise:cooldown',
+        'payment:circuit:wise:trial',
+      );
+    });
+
+    it('moves to HALF_OPEN after cooldown and allows only one trial', async () => {
+      const redis = createRedisMock();
+      redis.get.mockResolvedValue('OPEN');
+      redis.exists.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+      redis.set.mockResolvedValueOnce('OK').mockResolvedValueOnce('OK');
+
+      const breaker = new RedisCircuitBreaker(redis as never, {
+        key: 'payment:circuit:checkout',
+        failureThreshold: 2,
+        cooldownSeconds: 30,
+      });
+
+      const firstAttempt = await breaker.canExecute();
+      const secondAttempt = await breaker.canExecute();
+
+      expect(firstAttempt).toBe(true);
+      expect(secondAttempt).toBe(false);
+      expect(redis.set).toHaveBeenCalledWith(
+        'payment:circuit:checkout:trial',
+        '1',
+        'EX',
+        30,
+        'NX',
+      );
+      expect(redis.set).toHaveBeenCalledWith('payment:circuit:checkout:state', 'HALF_OPEN');
+    });
+
+    it('re-opens immediately when trial request fails in HALF_OPEN', async () => {
+      const redis = createRedisMock();
+      redis.get.mockResolvedValue('HALF_OPEN');
+      redis.set.mockResolvedValue('OK');
+      redis.del.mockResolvedValue(1);
+
+      const breaker = new RedisCircuitBreaker(redis as never, {
+        key: 'payment:circuit:crypto-rail',
+        failureThreshold: 2,
+        cooldownSeconds: 25,
+      });
+
+      await breaker.recordFailure();
+
+      expect(redis.set).toHaveBeenCalledWith('payment:circuit:crypto-rail:state', 'OPEN');
+      expect(redis.set).toHaveBeenCalledWith(
+        'payment:circuit:crypto-rail:cooldown',
+        '1',
+        'EX',
+        25,
+      );
+      expect(redis.del).toHaveBeenCalledWith('payment:circuit:crypto-rail:trial');
     });
   });
 });
