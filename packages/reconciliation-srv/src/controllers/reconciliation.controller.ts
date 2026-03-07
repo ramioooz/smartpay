@@ -1,21 +1,15 @@
 import { Request, Response } from 'express';
 import { reconciliationService } from '../services/reconciliation.service';
 import {
+  discrepancyIdParamsSchema,
   listDiscrepanciesSchema,
   listReportsSchema,
+  reportIdParamsSchema,
   resolveDiscrepancySchema,
   runSchema,
 } from '../validators/reconciliation.validators';
 
 export class ReconciliationController {
-  private readIdParam(value: string | string[] | undefined, label: string): string {
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value;
-    }
-
-    throw new Error(`${label} is required`);
-  }
-
   async runReconciliation(req: Request, res: Response): Promise<void> {
     const payload = runSchema.parse(req.body ?? {});
     const result = await reconciliationService.runManual(payload);
@@ -29,13 +23,7 @@ export class ReconciliationController {
   }
 
   async getReport(req: Request, res: Response): Promise<void> {
-    let reportId: string;
-    try {
-      reportId = this.readIdParam(req.params.id, 'Report id');
-    } catch (error) {
-      res.status(400).json({ error: error instanceof Error ? error.message : 'Report id is required' });
-      return;
-    }
+    const { id: reportId } = reportIdParamsSchema.parse(req.params);
 
     const report = await reconciliationService.getReportById(reportId);
     if (!report) {
@@ -53,20 +41,7 @@ export class ReconciliationController {
   }
 
   async resolveDiscrepancy(req: Request, res: Response): Promise<void> {
-    let discrepancyId: string;
-    try {
-      discrepancyId = this.readIdParam(req.params.id, 'Discrepancy id');
-    } catch (error) {
-      res
-        .status(400)
-        .json({ error: error instanceof Error ? error.message : 'Discrepancy id is required' });
-      return;
-    }
-
-    if (!/^[a-f0-9]{24}$/i.test(discrepancyId)) {
-      res.status(400).json({ error: `Discrepancy id ${discrepancyId} is not a valid Mongo ObjectId` });
-      return;
-    }
+    const { id: discrepancyId } = discrepancyIdParamsSchema.parse(req.params);
 
     const payload = resolveDiscrepancySchema.parse(req.body ?? {});
     const result = await reconciliationService.resolveDiscrepancy(discrepancyId, payload.note);

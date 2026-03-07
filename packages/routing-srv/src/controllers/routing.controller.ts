@@ -4,7 +4,13 @@ import { RoutingRuleDocument } from '../models/routing-rule.model';
 import { routingEngine } from '../services/routing-engine';
 import { pspHealthTracker } from '../services/psp-health-tracker';
 import { ruleManager } from '../services/rule-manager';
-import { createRuleSchema, routeSchema, updateRuleSchema } from '../validators/routing.validators';
+import {
+  createRuleSchema,
+  pspNameParamsSchema,
+  routeIdParamsSchema,
+  routeSchema,
+  updateRuleSchema,
+} from '../validators/routing.validators';
 
 export class RoutingController {
   async route(req: Request, res: Response): Promise<void> {
@@ -14,7 +20,7 @@ export class RoutingController {
   }
 
   async getPspHealth(req: Request, res: Response): Promise<void> {
-    const pspName = this.param(req, 'pspName');
+    const { pspName } = pspNameParamsSchema.parse(req.params);
     const health = await pspHealthTracker.getLatest(pspName);
 
     if (!health) {
@@ -37,7 +43,7 @@ export class RoutingController {
   }
 
   async updateRule(req: Request, res: Response): Promise<void> {
-    const id = this.param(req, 'id');
+    const { id } = routeIdParamsSchema.parse(req.params);
     const patch = updateRuleSchema.parse(req.body) as Partial<RoutingRuleDocument>;
     const updated = await ruleManager.updateRule(id, patch);
 
@@ -50,7 +56,7 @@ export class RoutingController {
   }
 
   async deactivateRule(req: Request, res: Response): Promise<void> {
-    const id = this.param(req, 'id');
+    const { id } = routeIdParamsSchema.parse(req.params);
     const deactivated = await ruleManager.deactivateRule(id);
 
     if (!deactivated) {
@@ -59,11 +65,6 @@ export class RoutingController {
     }
 
     res.status(204).send();
-  }
-
-  private param(req: Request, key: string): string {
-    const value = req.params[key];
-    return Array.isArray(value) ? value[0] : value;
   }
 }
 

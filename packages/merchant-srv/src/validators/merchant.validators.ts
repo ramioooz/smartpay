@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+const requiredParamSchema = z.preprocess(
+  (value) => (Array.isArray(value) ? value[0] : value),
+  z.string().min(1),
+);
+
 export const createMerchantSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
@@ -36,3 +41,14 @@ export const webhookSchema = z.object({
   event: z.enum(['payment.settled', 'payment.failed', 'payment.refunded']),
   url: z.url(),
 });
+
+export const merchantIdParamsSchema = z.object({
+  id: requiredParamSchema,
+});
+
+export const merchantKeyParamsSchema = z.object({
+  id: requiredParamSchema,
+  keyId: requiredParamSchema,
+});
+
+export const apiKeyHeaderSchema = z.string().min(1);
