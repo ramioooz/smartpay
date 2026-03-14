@@ -1,4 +1,4 @@
-import { Prisma } from '../../node_modules/.prisma/merchant-client';
+import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { prisma } from './prisma';

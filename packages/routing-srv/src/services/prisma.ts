@@ -1,3 +1,3 @@
-import { PrismaClient } from '../../node_modules/.prisma/routing-client';
+import { PrismaClient } from '@prisma/client';
 
 export const prisma: PrismaClient = new PrismaClient();

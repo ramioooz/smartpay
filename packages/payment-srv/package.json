@@ -11,7 +11,7 @@
     "dev": "tsc -w -p tsconfig.json",
     "lint": "eslint src --ext .ts",
     "test": "pnpm --dir ../.. test:spec -- tests/unit/orchestrator.test.ts tests/unit/saga.test.ts tests/integration/psp-failover.test.ts",
-    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:generate": "node ../../scripts/link-prisma-client.mjs payment-srv installed && prisma generate --schema prisma/schema.prisma && node ../../scripts/link-prisma-client.mjs payment-srv generated payment-client",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma"
   },
   "dependencies": {

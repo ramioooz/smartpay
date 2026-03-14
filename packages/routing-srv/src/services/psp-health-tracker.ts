@@ -1,4 +1,4 @@
-import { Prisma } from '../../node_modules/.prisma/routing-client';
+import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 
 export type PspHealthSummary = {
